@@ -14,7 +14,7 @@ exports.handle404 = async (req, res, next) => {
 */
 
 exports.handleErrors = async ({ message, status }, req, res, next) => {
- console.log(message, status);
+ //  console.log(message, status);
  res.status(status || 500);
  res.send({
   error: {

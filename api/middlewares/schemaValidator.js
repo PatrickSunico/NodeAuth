@@ -17,8 +17,9 @@ const validateBody = (schema) => {
   if (result.error) {
    const message = result.error.details[0].message;
    const error = new Error(message);
-   console.log(error);
+   //    console.log(error);
    error.status = 403;
+   console.log(result.error);
    next(error);
   }
 
@@ -43,10 +44,21 @@ const authSchema = Joi.object().keys({
   tlds: { allow: ["com", "net"] },
  }),
  password: Joi.string().required(),
- repeat_password: Joi.ref("password"),
+ repeat_password: Joi.string().required().valid(Joi.ref("password")).messages({
+  "string.base": `"Passwords do not match'`,
+ }),
+});
+
+const loginSchema = Joi.object().keys({
+ email: Joi.string().email({
+  minDomainSegments: 2,
+  tlds: { allow: ["com", "net"] },
+ }),
+ password: Joi.string().required(),
 });
 
 module.exports = {
  authSchema,
+ loginSchema,
  validateBody,
 };

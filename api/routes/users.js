@@ -9,7 +9,11 @@ const router = require("express").Router();
     title: Joi Validators
     desc: validators for specific schemas
 */
-const { validateBody, authSchema } = require("../middlewares/schemaValidator");
+const {
+ validateBody,
+ authSchema,
+ loginSchema,
+} = require("../middlewares/schemaValidator");
 
 /* 
     title: Lists of API Controllers 
@@ -41,7 +45,7 @@ router.route("/signup").post(validateBody(authSchema), registerUser);
     @desc - Endpoint for User Authentication
     @usage - validateBody checks the body schema first if valid, use HOF handles errors globally
 */
-router.route("/signin").post(loginUser);
+router.route("/signin").post(validateBody(loginSchema), loginUser);
 
 /*
     @title - Dashboard Route
