@@ -13,14 +13,12 @@ exports.handle404 = async (req, res, next) => {
     @usage - takes in an error object which consists of error: {message, status} 
 */
 
-exports.handleErrors = async (errorMessages, req, res, next) => {
- if (errorMessages) {
-  const error = {
-   ...errorMessages,
-   status: 403,
-  };
-
-  res.status(error.status || 500);
-  res.send(error);
- }
+exports.handleErrors = async ({ message, status }, req, res, next) => {
+ res.status(status || 500);
+ res.send({
+  error: {
+   status: status || 500,
+   message: message,
+  },
+ });
 };

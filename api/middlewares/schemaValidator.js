@@ -13,9 +13,14 @@ const validateBody = (schema) => {
    abortEarly: false,
   });
 
-  // if Error
   if (result.error) {
-   next(result.error);
+   console.log(result.error);
+   // log this message only in development mode;
+   process.env.NODE_ENV == "development" ? console.log(result.error) : "";
+
+   const error = new Error("Invalid Form Fields");
+   error.status = 403;
+   next(error);
   }
 
   if (!req.value) req.value = {};
@@ -42,7 +47,7 @@ const authSchema = Joi.object().keys({
  repeat_password: Joi.any()
   .equal(Joi.ref("password"))
   .required()
-  .label("Password's")
+  .label("Repeat Password")
   .messages({ "any.only": "{{#label}} does not match" }),
 });
 

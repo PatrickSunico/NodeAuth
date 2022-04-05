@@ -1,11 +1,14 @@
 // Models
 const User = require("../models/User");
+const OneTimePassword = require("../models/OneTimePassword");
 
 // JWT Token
 const {
  generateToken,
  refreshToken,
 } = require("../middlewares/tokenValidator");
+const { generateOTP } = require("../helpers/helpers");
+const { mailTransport } = require("../helpers/mail");
 
 /*
     @title - Registers the user 
@@ -19,7 +22,6 @@ const registerUser = async (req, res, next) => {
 
  const user = await User.findOne({ email });
  // if user exists don't save
- console.log("Route Called");
 
  if (user) return next({ message: "User Already Exists", status: 403 });
 
@@ -31,9 +33,27 @@ const registerUser = async (req, res, next) => {
   password,
  });
 
- // save user to DB
+ const payload = { id: newUser._id, email: newUser.email };
+ const signedToken = await generateToken(payload);
+
+ // step 1. store an otp to the db
+ const otp = await generateOTP();
+
+ const storeOtp = new OneTimePassword({
+  owner: newUser._id,
+  otp: otp,
+ });
+
+ //1. store otp first
+ await storeOtp.save();
+ //2. save user to DB
  await newUser.save();
- res.status(200).json({ message: "User Created", status: 200 });
+
+ mailTransport.sendMail({});
+
+ if (signedToken) {
+  res.status(200).json(signedToken);
+ }
 };
 
 /*
@@ -61,11 +81,6 @@ const loginUser = async (req, res, next) => {
  const payload = { id: user._id, email: user.email };
  const signedToken = await generateToken(payload);
  const signedRefreshToken = await refreshToken(payload);
-
- console.log({
-  signedToken: signedToken,
-  signedRefreshToken: signedRefreshToken,
- });
 
  if (signedToken) {
   res.status(200).json({
