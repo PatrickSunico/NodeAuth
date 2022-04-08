@@ -49,10 +49,10 @@ const registerUser = async (req, res, next) => {
  //2. save user to DB
  await newUser.save();
 
- mailTransport.sendMail({});
+ // 3. get the user ID
 
  if (signedToken) {
-  res.status(200).json(signedToken);
+  res.status(200).json({ token: signedToken, userId: newUser._id });
  }
 };
 
@@ -64,6 +64,7 @@ const registerUser = async (req, res, next) => {
 */
 
 const loginUser = async (req, res, next) => {
+ console.log(req.body);
  const { email, password } = req.body;
 
  // check if user exists
@@ -80,7 +81,7 @@ const loginUser = async (req, res, next) => {
  // JWT Sign token with id and email
  const payload = { id: user._id, email: user.email };
  const signedToken = await generateToken(payload);
- const signedRefreshToken = await refreshToken(payload);
+ //  const signedRefreshToken = await refreshToken(payload);
 
  if (signedToken) {
   res.status(200).json({
