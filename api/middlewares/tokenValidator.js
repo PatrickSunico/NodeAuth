@@ -19,7 +19,7 @@ const generateToken = (payload) =>
 */
 const refreshToken = (payload) =>
  JWT.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-  expiresIn: "1y",
+  expiresIn: "15m",
  });
 
 const decodeToken = async (token, next) => {

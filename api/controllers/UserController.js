@@ -88,7 +88,6 @@ const loginUser = async (req, res, next) => {
    message: "Success",
    status: 200,
    token: signedToken,
-   refreshToken: signedRefreshToken,
   });
  }
 };
