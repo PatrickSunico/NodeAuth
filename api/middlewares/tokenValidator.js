@@ -2,24 +2,24 @@ const JWT = require("jsonwebtoken");
 require("dotenv").config();
 
 /* 
-    @Title: generateToken
-    @Desc: generateToken that signs a users token whenever a user logins or registers to an account
+    @Title: generateAccessToken
+    @Desc: generateAccessToken that signs a users token whenever a user logins or registers to an account
     @Usage: takes in user id and and email as the payload and uses it to generate a token
 */
 
-const generateToken = (payload) =>
+const generateAccessToken = (payload) =>
  JWT.sign(payload, process.env.JWT_SECRET, {
-  expiresIn: "1h",
+  expiresIn: "5m",
  });
 
 /* 
     @Title: refreshToken
     @Desc: Automatically refreshes a token on user session
-    @Usage: The token will be valid until 1 year otherwise prompt them to sign in again
+    @Usage: 
 */
-const refreshToken = (payload) =>
+const generateRefreshToken = (payload) =>
  JWT.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-  expiresIn: "15m",
+  expiresIn: "5m",
  });
 
 const decodeToken = async (token, next) => {
@@ -58,8 +58,8 @@ const verifyAccessToken = async (req, res, next) => {
 };
 
 module.exports = {
- generateToken,
- refreshToken,
+ generateAccessToken,
+ generateRefreshToken,
  decodeToken,
  verifyAccessToken,
 };

@@ -4,16 +4,18 @@ const OneTimePassword = require("../models/OneTimePassword");
 
 // JWT Token
 const {
- generateToken,
- refreshToken,
+ generateAccessToken,
+ generateRefreshToken,
 } = require("../middlewares/tokenValidator");
+
+// Helpers and Mail
 const { generateOTP } = require("../helpers/helpers");
 const { mailTransport } = require("../helpers/mail");
 
 /*
     @title - Registers the user 
-    @desc - Registers the user and saves it in the database, and generates an otp for registration
-    @usage - checks if the user exists if not save in the db
+    @desc - Registers the user and saves it in the database, and store the refresh token inside the db 
+    @usage - checks if the user exists if not save in the db and then send an access token and refresh token
     @statusCodes - 403 (returns Forbidden Request),
 */
 
@@ -22,72 +24,69 @@ const registerUser = async (req, res, next) => {
 
  const user = await User.findOne({ email });
  // if user exists don't save
-
  if (user) return next({ message: "User Already Exists", status: 403 });
 
- //  Create a new User
- const newUser = new User({
-  first_name,
-  last_name,
-  email,
-  password,
- });
+ // 1. Create a new User and store it
+ const newUser = await User.create({ first_name, last_name, email, password });
 
+ // 2. Setup token generators and the payload
  const payload = { id: newUser._id, email: newUser.email };
- const signedToken = await generateToken(payload);
+ const newAccessToken = await generateAccessToken(payload);
+ const newRefreshToken = await generateRefreshToken(payload);
 
- // step 1. store an otp to the db
- const otp = await generateOTP();
+ // 3. update the user with a new refresh token
+ const insert = await User.updateOne(
+  { email: newUser.email },
+  { refreshToken: newRefreshToken }
+ );
 
- const storeOtp = new OneTimePassword({
-  owner: newUser._id,
-  otp: otp,
- });
-
- //1. store otp first
- await storeOtp.save();
- //2. save user to DB
- await newUser.save();
-
- // 3. get the user ID
-
- if (signedToken) {
-  res.status(200).json({ token: signedToken, userId: newUser._id });
+ if (insert && newAccessToken && newRefreshToken) {
+  res.status(200).json({
+   accessToken: newAccessToken,
+   refreshToken: newRefreshToken,
+   userId: newUser._id,
+  });
  }
 };
 
 /*
     @title - Login and Authenticate the user 
-    @desc - Authenticates the user and sends back a token
+    @desc - Authenticates the user and sends back new access and refresh tokens
     @statusCodes 
-    - 422 (returns Unprocessable Entity Invalid Params)
+    - 403 
 */
 
 const loginUser = async (req, res, next) => {
- console.log(req.body);
  const { email, password } = req.body;
 
- // check if user exists
+ // 1. check if user exists
  const user = await User.findOne({ email });
  if (!user) return next({ message: "User Does not Exists", status: 403 });
 
- // Password Check
+ // 2. Password Check
  const isMatched = await user.comparePassword(password);
 
  if (!isMatched) {
   return next({ message: "Invalid Email or Password", status: 403 });
  }
 
- // JWT Sign token with id and email
+ // 3. JWT Sign token with id and email
  const payload = { id: user._id, email: user.email };
- const signedToken = await generateToken(payload);
- //  const signedRefreshToken = await refreshToken(payload);
+ const newAccessToken = await generateAccessToken(payload);
+ const newRefreshToken = await generateRefreshToken(payload);
 
- if (signedToken) {
+ // 4. store the new refreshToken in the DB
+ const insert = await User.updateOne(
+  { email: email },
+  { refreshToken: newRefreshToken }
+ );
+
+ if (insert && newAccessToken && newRefreshToken) {
   res.status(200).json({
    message: "Success",
    status: 200,
-   token: signedToken,
+   accessToken: newAccessToken,
+   refreshToken: newRefreshToken,
   });
  }
 };
@@ -102,4 +101,41 @@ const accessDashboard = async (req, res, next) => {
  res.status(200).json({ message: "Success", status: 200 });
 };
 
-module.exports = { registerUser, loginUser, accessDashboard };
+/*
+    @title - handles the refresh token 
+    @desc -  whenever the token from the client side is expiring regenerate a new token
+    @statusCodes -  403 (UnAuthorized)
+*/
+
+const handleRefreshToken = async (req, res, next) => {
+ // 1. Take the refresh token from the client side check if it exists
+ const { refreshToken } = req.body;
+
+ if (!refreshToken) return next({ message: "Invalid Token", status: 401 });
+
+ // 2. compare and authenticate if the token exists in the db or locally
+
+ // 3. if everything is ok create a new access token and refresh token to user
+ //  // take the access token from the user
+ //  const { client_access_token } = req.body;
+ //  // send error if there is no token or it's invalid
+ //  if (!client_access_token && client_access_token === null) {
+ //   return next({ message: "Invalid Token Unauthorized", status: 403 });
+ //  }
+ // if everything is ok create a new access token and refresh token to user
+ //  const user = await User.findOne({ email });
+ //  const payload = { id: newUser._id, email: newUser.email };
+ //  const newRefreshToken = await refreshToken(payload);
+ //  console.log(newRefreshToken);
+ //  res.status(200).json({
+ //   message: "Success",
+ //   status: 200,
+ //   token: newRefreshToken,
+ //  });
+};
+module.exports = {
+ registerUser,
+ loginUser,
+ accessDashboard,
+ handleRefreshToken,
+};
